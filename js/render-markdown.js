@@ -1099,6 +1099,62 @@ RendererMarkdown.legendaryGroup = class {
 	}
 };
 
+RendererMarkdown.race = class {
+	static getCompactRenderedString (race, opts = {}) {
+		const meta = opts.meta || {};
+
+		const subStack = [""];
+
+		const ptHeightWeight = RendererMarkdown.race.getHeightAndWeightPart(race);
+		const ability = Renderer.getAbilityData(race.ability).asText;
+		const type = race.creatureTypes ? Parser.raceCreatureTypesToFull(race.creatureTypes) : null;
+		const size = (race.size || [Parser.SZ_VARIES]).map(sz => Parser.sizeAbvToFull(sz)).join("/")
+		const speed = Parser.getSpeedString(race);
+
+		const ptSubtitle = `**Ability Scores**: ${ability ? ability : "None"}${type ? `\n\n**Creature Type**: ${type}` : ""}\n\n**Size**: ${size}\n\n**Speed**: ${speed}\n\n`;
+
+		subStack[0] += `## ${race._displayName || race.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n${ptSubtitle ? `---\n\n` : ""}`;
+
+		const entry = {type: "entries", entries: race._isBaseRace ? race._baseRaceEntries : race.entries};
+		meta.depth = 1;
+
+		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
+
+		if (ptHeightWeight) subStack[0] += `\n\n----\n\n${ptHeightWeight}`;
+
+		const raceRender = subStack.join("").trim();
+		return `\n${raceRender}\n\n`;
+	}
+
+	static getHeightAndWeightPart (race) {
+		if (!race.heightAndWeight) return null;
+		if (race._isBaseRace) return null;
+
+		const colLabels = ["Base Height", "Base Weight", "Height Modifier", "Weight Modifier"];
+		const colStyles = ["col-2-3 text-center", "col-2-3 text-center", "col-2-3 text-center", "col-2 text-center"];
+
+		const row = [
+			Renderer.race.getRenderedHeight(race.heightAndWeight.baseHeight),
+			`${race.heightAndWeight.baseWeight} lb.`,
+			`+${race.heightAndWeight.heightMod}`,
+			`× (${race.heightAndWeight.weightMod || "1"}) lb.`,
+		];
+
+		const entries = [
+			"You may roll for your character's height and weight on the Random Height and Weight table. The roll in the Height Modifier column adds a number (in inches) to the character's base height. To get a weight, multiply the number you rolled for height by the roll in the Weight Modifier column and add the result (in pounds) to the base weight.",
+			{
+				type: "table",
+				caption: "Random Height and Weight",
+				colLabels,
+				colStyles,
+				rows: [row],
+			},
+		];
+
+		return RendererMarkdown.get().render({entries});
+	}
+};
+
 RendererMarkdown.hover = class {
 	static getFnRenderCompact (prop) {
 		return RendererMarkdown[prop]?.getCompactRenderedString;

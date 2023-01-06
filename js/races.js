@@ -53,6 +53,8 @@ class RacesPage extends ListPage {
 			dataProps: ["race"],
 
 			hasAudio: true,
+
+			isMarkdownPopout: true,
 		});
 	}
 
