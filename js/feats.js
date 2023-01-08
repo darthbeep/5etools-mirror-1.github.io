@@ -51,6 +51,8 @@ class FeatsPage extends ListPage {
 			dataProps: ["feat"],
 
 			isPreviewable: true,
+
+			isMarkdownPopout: true,
 		});
 	}
 
