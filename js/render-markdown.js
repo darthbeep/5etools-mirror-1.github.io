@@ -1210,6 +1210,28 @@ RendererMarkdown.optionalfeature = class {
 	}
 };
 
+RendererMarkdown.background = class {
+	static getCompactRenderedString (feat, opts = {}) {
+		const meta = opts.meta || {};
+
+		const subStack = [""];
+
+		const prerequisite = Renderer.utils.prerequisite.getHtml(feat.prerequisite, {isTextOnly: true, isSkipPrefix: true});
+
+		const ptSubtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
+
+		subStack[0] += `## ${feat._displayName || feat.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n----\n\n`;
+
+		const entry = {type: "entries", entries: feat.entries};
+		meta.depth = 0;
+
+		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
+
+		const featRender = subStack.join("").trim();
+		return `\n${featRender}\n\n`;
+	}
+};
+
 RendererMarkdown.hover = class {
 	static getFnRenderCompact (prop) {
 		return RendererMarkdown[prop]?.getCompactRenderedString;
