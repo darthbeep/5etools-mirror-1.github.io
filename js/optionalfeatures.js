@@ -66,6 +66,8 @@ class OptionalFeaturesPage extends ListPage {
 			},
 
 			isPreviewable: true,
+
+			isMarkdownPopout: true,
 		});
 	}
 
