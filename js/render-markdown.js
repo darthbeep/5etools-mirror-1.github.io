@@ -1211,24 +1211,24 @@ RendererMarkdown.optionalfeature = class {
 };
 
 RendererMarkdown.background = class {
-	static getCompactRenderedString (feat, opts = {}) {
+	static getCompactRenderedString (background, opts = {}) {
 		const meta = opts.meta || {};
 
 		const subStack = [""];
 
-		const prerequisite = Renderer.utils.prerequisite.getHtml(feat.prerequisite, {isTextOnly: true, isSkipPrefix: true});
+		const prerequisite = Renderer.utils.prerequisite.getHtml(background.prerequisite, {isTextOnly: true, isSkipPrefix: true});
 
 		const ptSubtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
 
-		subStack[0] += `## ${feat._displayName || feat.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n----\n\n`;
+		subStack[0] += `## ${background._displayName || background.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n----\n\n`;
 
-		const entry = {type: "entries", entries: feat.entries};
+		const entry = {type: "entries", entries: background.entries};
 		meta.depth = 0;
 
 		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
 
-		const featRender = subStack.join("").trim();
-		return `\n${featRender}\n\n`;
+		const backgroundRender = subStack.join("").trim();
+		return `\n${backgroundRender}\n\n`;
 	}
 };
 
