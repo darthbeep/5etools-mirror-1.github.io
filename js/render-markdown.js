@@ -1185,7 +1185,9 @@ RendererMarkdown.optionalfeature = class {
 
 		const prerequisite = Renderer.utils.prerequisite.getHtml(of.prerequisite, {isTextOnly: true, isSkipPrefix: true});
 
-		const ptSubtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
+		const typeText = RendererMarkdown.optionalfeature.getTypeText(of);
+
+		const ptSubtitle = `${prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : ""}${typeText ? `*${typeText}*` : ""}`;
 
 		subStack[0] += `## ${of._displayName || of.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n----\n\n`;
 
@@ -1196,6 +1198,15 @@ RendererMarkdown.optionalfeature = class {
 
 		const ofRender = subStack.join("").trim();
 		return `\n${ofRender}\n\n`;
+	}
+
+	static getTypeText (it) {
+		const commonPrefix = it.featureType.length > 1 ? MiscUtil.findCommonPrefix(it.featureType.map(fs => Parser.optFeatureTypeToFull(fs)), {isRespectWordBoundaries: true}) : "";
+
+		return [
+			commonPrefix.trim() || null,
+			it.featureType.map(ft => Parser.optFeatureTypeToFull(ft).substring(commonPrefix.length)).join("/"),
+		].filter(Boolean).join(" ");
 	}
 };
 
