@@ -49,6 +49,8 @@ class ConditionsDiseasesPage extends ListPage {
 			dataProps: ["condition", "disease", "status"],
 
 			isPreviewable: true,
+
+			isMarkdownPopout: true,
 		});
 	}
 

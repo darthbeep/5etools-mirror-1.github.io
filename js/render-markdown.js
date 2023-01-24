@@ -690,6 +690,12 @@ class RendererMarkdown {
 			case "@deity":
 				textStack[0] += `**${Renderer.stripTags(`{${tag} ${text}}`)}**`; break;
 
+			case "@note":
+				textStack[0] += `*`;
+				this._recursiveRender(text, textStack, meta);
+				textStack[0] += `*`;
+				break;
+
 			default: {
 				switch (tag) {
 					case "@item": {
@@ -1180,6 +1186,36 @@ RendererMarkdown.background = class {
 		const prerequisite = Renderer.utils.prerequisite.getHtml(background.prerequisite, {isTextOnly: true, isSkipPrefix: true});
 		const subtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
 		const entry = {type: "entries", entries: background.entries};
+
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+	}
+};
+
+RendererMarkdown.condition = class {
+	static getCompactRenderedString (condition, opts = {}) {
+		const title = condition._displayName || condition.name;
+		const subtitle = "";
+		const entry = {type: "entries", entries: condition.entries};
+
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+	}
+};
+
+RendererMarkdown.disease = class {
+	static getCompactRenderedString (disease, opts = {}) {
+		const title = disease._displayName || disease.name;
+		const subtitle = "";
+		const entry = {type: "entries", entries: disease.entries};
+
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+	}
+};
+
+RendererMarkdown.status = class {
+	static getCompactRenderedString (status, opts = {}) {
+		const title = status._displayName || status.name;
+		const subtitle = "";
+		const entry = {type: "entries", entries: status.entries};
 
 		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
 	}
