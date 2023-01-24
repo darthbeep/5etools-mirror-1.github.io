@@ -1101,29 +1101,16 @@ RendererMarkdown.legendaryGroup = class {
 
 RendererMarkdown.race = class {
 	static getCompactRenderedString (race, opts = {}) {
-		const meta = opts.meta || {};
-
-		const subStack = [""];
-
-		const ptHeightWeight = RendererMarkdown.race.getHeightAndWeightPart(race);
+		const title = race._displayName || race.name;
+		const postfix = RendererMarkdown.race.getHeightAndWeightPart(race);
 		const ability = Renderer.getAbilityData(race.ability).asText;
 		const type = race.creatureTypes ? Parser.raceCreatureTypesToFull(race.creatureTypes) : null;
 		const size = (race.size || [Parser.SZ_VARIES]).map(sz => Parser.sizeAbvToFull(sz)).join("/")
 		const speed = Parser.getSpeedString(race);
-
-		const ptSubtitle = `**Ability Scores**: ${ability ? ability : "None"}${type ? `\n\n**Creature Type**: ${type}` : ""}\n\n**Size**: ${size}\n\n**Speed**: ${speed}\n\n`;
-
-		subStack[0] += `## ${race._displayName || race.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n${ptSubtitle ? `---\n\n` : ""}`;
-
+		const subtitle = `**Ability Scores**: ${ability ? ability : "None"}${type ? `\n\n**Creature Type**: ${type}` : ""}\n\n**Size**: ${size}\n\n**Speed**: ${speed}\n\n`;
 		const entry = {type: "entries", entries: race._isBaseRace ? race._baseRaceEntries : race.entries};
-		meta.depth = 1;
 
-		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
-
-		if (ptHeightWeight) subStack[0] += `\n\n----\n\n${ptHeightWeight}`;
-
-		const raceRender = subStack.join("").trim();
-		return `\n${raceRender}\n\n`;
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, postfix, opts);
 	}
 
 	static getHeightAndWeightPart (race) {
@@ -1157,47 +1144,24 @@ RendererMarkdown.race = class {
 
 RendererMarkdown.feat = class {
 	static getCompactRenderedString (feat, opts = {}) {
-		const meta = opts.meta || {};
-
-		const subStack = [""];
-
 		const prerequisite = Renderer.utils.prerequisite.getHtml(feat.prerequisite, {isTextOnly: true, isSkipPrefix: true});
-
-		const ptSubtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
-
-		subStack[0] += `## ${feat._displayName || feat.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n----\n\n`;
-
+		const title = feat._displayName || feat.name;
+		const subtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
 		const entry = {type: "entries", entries: feat.entries};
-		meta.depth = 1;
 
-		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
-
-		const featRender = subStack.join("").trim();
-		return `\n${featRender}\n\n`;
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
 	}
 };
 
 RendererMarkdown.optionalfeature = class {
 	static getCompactRenderedString (of, opts = {}) {
-		const meta = opts.meta || {};
-
-		const subStack = [""];
-
 		const prerequisite = Renderer.utils.prerequisite.getHtml(of.prerequisite, {isTextOnly: true, isSkipPrefix: true});
-
+		const title = of._displayName || of.name;
 		const typeText = RendererMarkdown.optionalfeature.getTypeText(of);
-
-		const ptSubtitle = `${prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : ""}${typeText ? `*${typeText}*` : ""}`;
-
-		subStack[0] += `## ${of._displayName || of.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n----\n\n`;
-
+		const subtitle = `${prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : ""}${typeText ? `*${typeText}*` : ""}`;
 		const entry = {type: "entries", entries: of.entries};
-		meta.depth = 1;
 
-		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
-
-		const ofRender = subStack.join("").trim();
-		return `\n${ofRender}\n\n`;
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
 	}
 
 	static getTypeText (it) {
@@ -1212,23 +1176,12 @@ RendererMarkdown.optionalfeature = class {
 
 RendererMarkdown.background = class {
 	static getCompactRenderedString (background, opts = {}) {
-		const meta = opts.meta || {};
-
-		const subStack = [""];
-
+		const title = background._displayName || background.name;
 		const prerequisite = Renderer.utils.prerequisite.getHtml(background.prerequisite, {isTextOnly: true, isSkipPrefix: true});
-
-		const ptSubtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
-
-		subStack[0] += `## ${background._displayName || background.name}${ptSubtitle ? `\n\n${ptSubtitle}` : ""}\n\n----\n\n`;
-
+		const subtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
 		const entry = {type: "entries", entries: background.entries};
-		meta.depth = 0;
 
-		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
-
-		const backgroundRender = subStack.join("").trim();
-		return `\n${backgroundRender}\n\n`;
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
 	}
 };
 
@@ -2054,6 +2007,24 @@ class MarkdownConverter {
 		if (tbl.colLabels && !tbl.colLabels.some(Boolean)) delete tbl.colLabels;
 		if (tbl.colStyles && !tbl.colStyles.some(Boolean)) delete tbl.colStyles;
 	}
+
+	static _getCompactRenderedString (title, subtitle, entry, postfix = null, opts = {}) {
+		const meta = opts.meta || {};
+
+		const subStack = [""];
+
+		subStack[0] += `## ${title}${subtitle ? `\n\n${subtitle}` : ""}\n\n----\n\n`;
+
+		meta.depth = 0;
+
+		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
+
+		if (postfix) subStack[0] += `\n\n----\n\n${postfix}`;
+
+		const itemRender = subStack.join("").trim();
+		return `\n${itemRender}\n\n`;
+	}
+
 	// endregion
 }
 
