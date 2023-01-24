@@ -1150,12 +1150,7 @@ RendererMarkdown.race = class {
 
 RendererMarkdown.feat = class {
 	static getCompactRenderedString (feat, opts = {}) {
-		const prerequisite = Renderer.utils.prerequisite.getHtml(feat.prerequisite, {isTextOnly: true, isSkipPrefix: true});
-		const title = feat._displayName || feat.name;
-		const subtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
-		const entry = {type: "entries", entries: feat.entries};
-
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+		return MarkdownConverter._getCompactRenderedStringGeneric(feat, opts);
 	}
 };
 
@@ -1182,42 +1177,31 @@ RendererMarkdown.optionalfeature = class {
 
 RendererMarkdown.background = class {
 	static getCompactRenderedString (background, opts = {}) {
-		const title = background._displayName || background.name;
-		const prerequisite = Renderer.utils.prerequisite.getHtml(background.prerequisite, {isTextOnly: true, isSkipPrefix: true});
-		const subtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
-		const entry = {type: "entries", entries: background.entries};
-
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+		return MarkdownConverter._getCompactRenderedStringGeneric(background, opts);
 	}
 };
 
 RendererMarkdown.condition = class {
 	static getCompactRenderedString (condition, opts = {}) {
-		const title = condition._displayName || condition.name;
-		const subtitle = "";
-		const entry = {type: "entries", entries: condition.entries};
-
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+		return MarkdownConverter._getCompactRenderedStringGeneric(condition, opts);
 	}
 };
 
 RendererMarkdown.disease = class {
 	static getCompactRenderedString (disease, opts = {}) {
-		const title = disease._displayName || disease.name;
-		const subtitle = "";
-		const entry = {type: "entries", entries: disease.entries};
-
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+		return MarkdownConverter._getCompactRenderedStringGeneric(disease, opts);
 	}
 };
 
 RendererMarkdown.status = class {
 	static getCompactRenderedString (status, opts = {}) {
-		const title = status._displayName || status.name;
-		const subtitle = "";
-		const entry = {type: "entries", entries: status.entries};
+		return MarkdownConverter._getCompactRenderedStringGeneric(status, opts);
+	}
+};
 
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+RendererMarkdown.charoption = class {
+	static getCompactRenderedString (charoption, opts = {}) {
+		return MarkdownConverter._getCompactRenderedStringGeneric(charoption, opts);
 	}
 };
 
@@ -2042,6 +2026,15 @@ class MarkdownConverter {
 		if (!tbl.caption) delete tbl.caption;
 		if (tbl.colLabels && !tbl.colLabels.some(Boolean)) delete tbl.colLabels;
 		if (tbl.colStyles && !tbl.colStyles.some(Boolean)) delete tbl.colStyles;
+	}
+
+	static _getCompactRenderedStringGeneric (it, opts = {}) {
+		const title = it._displayName || it.name;
+		const prerequisite = Renderer.utils.prerequisite.getHtml(it.prerequisite, {isTextOnly: true, isSkipPrefix: true});
+		const subtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
+		const entry = {type: "entries", entries: it.entries};
+
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
 	}
 
 	static _getCompactRenderedString (title, subtitle, entry, postfix = null, opts = {}) {
