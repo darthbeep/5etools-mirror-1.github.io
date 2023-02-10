@@ -1116,7 +1116,9 @@ RendererMarkdown.race = class {
 		const subtitle = `**Ability Scores**: ${ability ? ability : "None"}${type ? `\n\n**Creature Type**: ${type}` : ""}\n\n**Size**: ${size}\n\n**Speed**: ${speed}\n\n`;
 		const entry = {type: "entries", entries: race._isBaseRace ? race._baseRaceEntries : race.entries};
 
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, postfix, opts);
+		opts.postfix = postfix;
+
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
 	}
 
 	static getHeightAndWeightPart (race) {
@@ -1162,7 +1164,7 @@ RendererMarkdown.optionalfeature = class {
 		const subtitle = `${prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : ""}${typeText ? `*${typeText}*` : ""}`;
 		const entry = {type: "entries", entries: of.entries};
 
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
 	}
 
 	static getTypeText (it) {
@@ -1202,6 +1204,34 @@ RendererMarkdown.status = class {
 RendererMarkdown.charoption = class {
 	static getCompactRenderedString (charoption, opts = {}) {
 		return MarkdownConverter._getCompactRenderedStringGeneric(charoption, opts);
+	}
+};
+
+RendererMarkdown.cult = class {
+	static getCompactRenderedString (cult, opts = {}) {
+		opts.prefix = RendererMarkdown.cult.getCultistDetails(cult);
+		opts.depth = 1;
+		return MarkdownConverter._getCompactRenderedStringGeneric(cult, opts);
+	}
+
+	static getCultistDetails(cult) {
+		const goal = cult.goal?.entry || "";
+		const cultists = cult.cultists?.entry || "";
+		const signaturespells = cult.signaturespells?.entry || "";
+
+		const details = `${goal ? `**Goals**: ${goal}\n\n` : ""}`
+			+ `${cultists ? `**Typical Cultists**: ${cultists}\n\n` : ""}`
+			+`${goal ? `**Signature Spells**: ${signaturespells}\n\n` : ""}`
+
+		return Renderer.stripTags(details);
+	}
+};
+
+RendererMarkdown.boon = class {
+	static getCompactRenderedString (boon, opts = {}) {
+		opts.noDivider = true;
+		opts.depth = 1;
+		return MarkdownConverter._getCompactRenderedStringGeneric(boon, opts);
 	}
 };
 
@@ -2034,21 +2064,23 @@ class MarkdownConverter {
 		const subtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
 		const entry = {type: "entries", entries: it.entries};
 
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, null, opts);
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
 	}
 
-	static _getCompactRenderedString (title, subtitle, entry, postfix = null, opts = {}) {
+	static _getCompactRenderedString (title, subtitle, entry, opts = {}) {
 		const meta = opts.meta || {};
 
 		const subStack = [""];
 
-		subStack[0] += `## ${title}${subtitle ? `\n\n${subtitle}` : ""}\n\n----\n\n`;
+		subStack[0] += `## ${title}${subtitle ? `\n\n${subtitle}` : ""}\n\n${opts.noDivider ? "" : "----"}\n\n`;
 
-		meta.depth = 0;
+		subStack[0] += opts.prefix ? `${opts.prefix}\n\n` : "";
+
+		meta.depth = opts.depth || 0;
 
 		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
 
-		if (postfix) subStack[0] += `\n\n----\n\n${postfix}`;
+		if (opts.postfix) subStack[0] += `\n\n----\n\n${opts.postfix}`;
 
 		const itemRender = subStack.join("").trim();
 		return `\n${itemRender}\n\n`;
