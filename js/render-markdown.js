@@ -1118,19 +1118,18 @@ RendererMarkdown.legendaryGroup = class {
 
 RendererMarkdown.race = class {
 	static getCompactRenderedString (race, opts = {}) {
-		const title = race._displayName || race.name;
 		const postfix = RendererMarkdown.race.getHeightAndWeightPart(race);
 		const ability = Renderer.getAbilityData(race.ability).asText;
 		const type = race.creatureTypes ? Parser.raceCreatureTypesToFull(race.creatureTypes) : null;
 		const size = (race.size || [Parser.SZ_VARIES]).map(sz => Parser.sizeAbvToFull(sz)).join("/")
 		const speed = Parser.getSpeedString(race);
-		const subtitle = `**Ability Scores**: ${ability ? ability : "None"}${type ? `\n\n**Creature Type**: ${type}` : ""}\n\n**Size**: ${size}\n\n**Speed**: ${speed}\n\n`;
-		const entry = {type: "entries", entries: race._isBaseRace ? race._baseRaceEntries : race.entries};
 
+		opts.subtitle = `**Ability Scores**: ${ability ? ability : "None"}${type ? `\n\n**Creature Type**: ${type}` : ""}\n\n**Size**: ${size}\n\n**Speed**: ${speed}\n\n`;
+		opts.subtitleNoStar = true;
 		opts.postfix = postfix;
 		opts.depth = 1;
 
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
+		return MarkdownConverter._getCompactRenderedStringGeneric(race, opts);
 	}
 
 	static getHeightAndWeightPart (race) {
@@ -1170,13 +1169,10 @@ RendererMarkdown.feat = class {
 
 RendererMarkdown.optionalfeature = class {
 	static getCompactRenderedString (of, opts = {}) {
-		const prerequisite = Renderer.utils.prerequisite.getHtml(of.prerequisite, {isTextOnly: true, isSkipPrefix: true});
-		const title = of._displayName || of.name;
 		const typeText = RendererMarkdown.optionalfeature.getTypeText(of);
-		const subtitle = `${prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : ""}${typeText ? `*${typeText}*` : ""}`;
-		const entry = {type: "entries", entries: of.entries};
+		opts.subtitle = typeText ? typeText : "";
 
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
+		return MarkdownConverter._getCompactRenderedStringGeneric(of, opts);
 	}
 
 	static getTypeText (it) {
@@ -1249,16 +1245,13 @@ RendererMarkdown.boon = class {
 
 RendererMarkdown.object = class {
 	static getCompactRenderedString (object, opts = {}) {
-		const title = object._displayName || object.name;
-		const subtitle = `*${object.objectType !== "GEN" ? `${Parser.sizeAbvToFull(object.size)} ${object.creatureType ? Parser.monTypeToFullObj(object.creatureType).asText : "object"}` : `Variable size object`}*`;
-		const entry = {type: "entries", entries: object.entries};
-
+		opts.subtitle = object.objectType !== "GEN" ? `${Parser.sizeAbvToFull(object.size)} ${object.creatureType ? Parser.monTypeToFullObj(object.creatureType).asText : "object"}` : `Variable size object`;
 		opts.noDivider = true;
 		opts.depth = 1;
 		opts.prefix = RendererMarkdown.object.getObjectDetails(object);
 		opts.postfix = RendererMarkdown.object.getObjectActions(object);
 
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
+		return MarkdownConverter._getCompactRenderedStringGeneric(object, opts);
 	}
 
 	static getObjectDetails(obj) {
@@ -1276,6 +1269,37 @@ ${obj.conditionImmune ? `**Condition Immunities:** ${Parser.getFullCondImm(obj.c
 
 	static getObjectActions(obj) {
 		return obj.actionEntries.map(ae => RendererMarkdown.get().render(ae, 2)).join("\n\n");
+	}
+};
+
+RendererMarkdown.trap = class {
+	static getCompactRenderedString (trap, opts = {}) {
+		opts.subtitle = Renderer.traphazard.getSubtitle(trap);
+		opts.noDivider = true;
+		opts.depth = 1;
+		opts.postfix = RendererMarkdown.trap.getRenderedTrapPart(trap);
+
+		return MarkdownConverter._getCompactRenderedStringGeneric(trap, opts);
+	}
+
+	static getRenderedTrapPart (it) {
+		const trapEntries = Renderer.trap._getTrapEntries(it);
+
+		if (!trapEntries.length) return "";
+
+		return RendererMarkdown.get().render({
+			entries: trapEntries,
+		}, 1);
+	}
+};
+
+RendererMarkdown.hazard = class {
+	static getCompactRenderedString (hazard, opts = {}) {
+		opts.subtitle = Renderer.traphazard.getSubtitle(hazard);
+		opts.noDivider = true;
+		opts.depth = 1;
+		
+		return MarkdownConverter._getCompactRenderedStringGeneric(hazard, opts);
 	}
 };
 
@@ -2105,19 +2129,21 @@ class MarkdownConverter {
 	static _getCompactRenderedStringGeneric (it, opts = {}) {
 		const title = it._displayName || it.name;
 		const prerequisite = Renderer.utils.prerequisite.getHtml(it.prerequisite, {isTextOnly: true, isSkipPrefix: true});
-		const subtitle = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
 		const entry = {type: "entries", entries: it.entries};
 
-		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
+		opts.prerequisite = prerequisite ? `**Prerequisite**: ${prerequisite}\n\n` : "";
+
+		return MarkdownConverter._getCompactRenderedString(title, entry, opts);
 	}
 
-	static _getCompactRenderedString (title, subtitle, entry, opts = {}) {
+	static _getCompactRenderedString (title, entry, opts = {}) {
 		const meta = opts.meta || {};
 
 		const subStack = [""];
 
-		subStack[0] += `## ${title}${subtitle ? `\n\n${subtitle}` : ""}\n\n${opts.noDivider ? "" : "----"}\n\n`;
-
+		subStack[0] += `## ${title}${opts.subtitle ? `\n\n${opts.subtitleNoStar ? "" : "*"}${opts.subtitle}${opts.subtitleNoStar ? "" : "*"}` : ""}`
+		subStack[0] +=`${opts.prerequisite ? `\n\n${opts.prerequisite}` : ""}\n\n`		
+		subStack[0] +=`${opts.noDivider ? "" : "----"}\n\n`;
 		subStack[0] += opts.prefix ? `${opts.prefix}\n\n` : "";
 
 		meta.depth = opts.depth || 0;
