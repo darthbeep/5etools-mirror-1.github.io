@@ -422,21 +422,32 @@ class RendererMarkdown {
 		textStack[0] += `[${href}](${this.render(entry.text)})`;
 	}
 
-	/*
+	
+	// TODO: This might need to be more complicated but this works for now
 	_renderActions (entry, textStack, meta, options) {
-		// TODO
+		textStack[0] += `***${entry.name}.*** `
+		const len = entry.entries.length;
+		for (let i = 0; i < len; ++i) this._recursiveRender(entry.entries[i], textStack, meta);
 	}
 
 	_renderAttack (entry, textStack, meta, options) {
-		// TODO
+		this._renderPrefix(entry, textStack, meta, options);
+		textStack[0] += `*${Parser.attackTypeToFull(entry.attackType)}:* `;
+		const len = entry.attackEntries.length;
+		for (let i = 0; i < len; ++i) this._recursiveRender(entry.attackEntries[i], textStack, meta);
+		textStack[0] += ` *Hit:* `;
+		const len2 = entry.hitEntries.length;
+		for (let i = 0; i < len2; ++i) this._recursiveRender(entry.hitEntries[i], textStack, meta);
+		this._renderSuffix(entry, textStack, meta, options);
 	}
 
+	/*
 	_renderIngredient (entry, textStack, meta, options) {
 		// (Use base implementation)
 	}
 	// endregion
 
-	*/
+	*/	
 	// region list items
 	_renderItem (entry, textStack, meta, options) {
 		this._renderPrefix(entry, textStack, meta, options);
@@ -1117,6 +1128,7 @@ RendererMarkdown.race = class {
 		const entry = {type: "entries", entries: race._isBaseRace ? race._baseRaceEntries : race.entries};
 
 		opts.postfix = postfix;
+		opts.depth = 1;
 
 		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
 	}
@@ -1232,6 +1244,38 @@ RendererMarkdown.boon = class {
 		opts.noDivider = true;
 		opts.depth = 1;
 		return MarkdownConverter._getCompactRenderedStringGeneric(boon, opts);
+	}
+};
+
+RendererMarkdown.object = class {
+	static getCompactRenderedString (object, opts = {}) {
+		const title = object._displayName || object.name;
+		const subtitle = `*${object.objectType !== "GEN" ? `${Parser.sizeAbvToFull(object.size)} ${object.creatureType ? Parser.monTypeToFullObj(object.creatureType).asText : "object"}` : `Variable size object`}*`;
+		const entry = {type: "entries", entries: object.entries};
+
+		opts.noDivider = true;
+		opts.depth = 1;
+		opts.prefix = RendererMarkdown.object.getObjectDetails(object);
+		opts.postfix = RendererMarkdown.object.getObjectActions(object);
+
+		return MarkdownConverter._getCompactRenderedString(title, subtitle, entry, opts);
+	}
+
+	static getObjectDetails(obj) {
+		return `${obj.capCrew != null || obj.capPassenger != null ? `**Creature Capacity:** ${Renderer.vehicle.getShipCreatureCapacity(obj)}\n\n` : ""}
+${obj.capCargo != null ? `**Cargo Capacity:** ${Renderer.vehicle.getShipCargoCapacity(obj)}\n\n` : ""}
+${obj.ac != null ? `**Armor Class:** ${obj.ac.special ?? obj.ac}\n\n` : ""}
+${obj.hp != null ? `**Hit Points:** ${obj.hp.special ?? obj.hp}\n\n` : ""}
+${obj.speed != null ? `**Speed:** ${Parser.getSpeedString(obj)}\n\n` : ""}
+${obj.immune != null ? `**Damage Immunities:** ${Parser.getFullImmRes(obj.immune)}\n\n` : ""}
+${Parser.ABIL_ABVS.some(ab => obj[ab] != null) ? `**Ability Scores:** ${Parser.ABIL_ABVS.filter(ab => obj[ab] != null).map(ab => `${ab.toUpperCase()} ${obj[ab]} (${Parser.getAbilityModifier(obj[ab])})`).join(", ")}\n\n` : ""}
+${obj.resist ? `**Damage Resistances:** ${Parser.getFullImmRes(obj.resist)}\n\n` : ""}
+${obj.vulnerable ? `**Damage Vulnerabilities:** ${Parser.getFullImmRes(obj.vulnerable)}\n\n` : ""}
+${obj.conditionImmune ? `**Condition Immunities:** ${Parser.getFullCondImm(obj.conditionImmune)}\n\n` : ""}	`
+	}
+
+	static getObjectActions(obj) {
+		return obj.actionEntries.map(ae => RendererMarkdown.get().render(ae, 2)).join("\n\n");
 	}
 };
 
