@@ -48,6 +48,8 @@ class ActionsPage extends ListPage {
 			dataProps: ["action"],
 
 			isPreviewable: true,
+
+			isMarkdownPopout: true,
 		});
 	}
 

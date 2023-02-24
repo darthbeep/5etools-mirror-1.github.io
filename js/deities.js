@@ -51,6 +51,8 @@ class DeitiesPage extends ListPage {
 			listClass: "deities",
 
 			dataProps: ["deity"],
+
+			isMarkdownPopout: true,
 		});
 	}
 

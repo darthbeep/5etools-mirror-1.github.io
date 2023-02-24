@@ -1119,14 +1119,9 @@ RendererMarkdown.legendaryGroup = class {
 RendererMarkdown.race = class {
 	static getCompactRenderedString (race, opts = {}) {
 		const postfix = RendererMarkdown.race.getHeightAndWeightPart(race);
-		const ability = Renderer.getAbilityData(race.ability).asText;
-		const type = race.creatureTypes ? Parser.raceCreatureTypesToFull(race.creatureTypes) : null;
-		const size = (race.size || [Parser.SZ_VARIES]).map(sz => Parser.sizeAbvToFull(sz)).join("/")
-		const speed = Parser.getSpeedString(race);
-
-		opts.subtitle = `**Ability Scores**: ${ability ? ability : "None"}${type ? `\n\n**Creature Type**: ${type}` : ""}\n\n**Size**: ${size}\n\n**Speed**: ${speed}\n\n`;
+		opts.subtitle = MarkdownConverter.getGenericDetails(race);
 		opts.subtitleNoStar = true;
-		opts.postfix = postfix;
+		opts.postfix = `----\n\n${postfix}`;
 		opts.depth = 1;
 
 		return MarkdownConverter._getCompactRenderedStringGeneric(race, opts);
@@ -1217,21 +1212,9 @@ RendererMarkdown.charoption = class {
 
 RendererMarkdown.cult = class {
 	static getCompactRenderedString (cult, opts = {}) {
-		opts.prefix = RendererMarkdown.cult.getCultistDetails(cult);
+		opts.prefix = MarkdownConverter.getGenericDetails(cult);
 		opts.depth = 1;
 		return MarkdownConverter._getCompactRenderedStringGeneric(cult, opts);
-	}
-
-	static getCultistDetails(cult) {
-		const goal = cult.goal?.entry || "";
-		const cultists = cult.cultists?.entry || "";
-		const signaturespells = cult.signaturespells?.entry || "";
-
-		const details = `${goal ? `**Goals**: ${goal}\n\n` : ""}`
-			+ `${cultists ? `**Typical Cultists**: ${cultists}\n\n` : ""}`
-			+`${goal ? `**Signature Spells**: ${signaturespells}\n\n` : ""}`
-
-		return Renderer.stripTags(details);
 	}
 };
 
@@ -1245,30 +1228,19 @@ RendererMarkdown.boon = class {
 
 RendererMarkdown.object = class {
 	static getCompactRenderedString (object, opts = {}) {
+		const propertiesOrder = ["Creature Capacity", "Cargo Capacity", "Armor Class", "Hit Points", "Speed", "Damage Immunities", "Ability Scores", "Damage Resistances", "Damage Vulnerabilities", "Condition Immunities"]
+
 		opts.subtitle = object.objectType !== "GEN" ? `${Parser.sizeAbvToFull(object.size)} ${object.creatureType ? Parser.monTypeToFullObj(object.creatureType).asText : "object"}` : `Variable size object`;
 		opts.noDivider = true;
 		opts.depth = 1;
-		opts.prefix = RendererMarkdown.object.getObjectDetails(object);
+		opts.prefix = MarkdownConverter.getGenericDetails(object, true, propertiesOrder);
 		opts.postfix = RendererMarkdown.object.getObjectActions(object);
 
 		return MarkdownConverter._getCompactRenderedStringGeneric(object, opts);
 	}
 
-	static getObjectDetails(obj) {
-		return `${obj.capCrew != null || obj.capPassenger != null ? `**Creature Capacity:** ${Renderer.vehicle.getShipCreatureCapacity(obj)}\n\n` : ""}
-${obj.capCargo != null ? `**Cargo Capacity:** ${Renderer.vehicle.getShipCargoCapacity(obj)}\n\n` : ""}
-${obj.ac != null ? `**Armor Class:** ${obj.ac.special ?? obj.ac}\n\n` : ""}
-${obj.hp != null ? `**Hit Points:** ${obj.hp.special ?? obj.hp}\n\n` : ""}
-${obj.speed != null ? `**Speed:** ${Parser.getSpeedString(obj)}\n\n` : ""}
-${obj.immune != null ? `**Damage Immunities:** ${Parser.getFullImmRes(obj.immune)}\n\n` : ""}
-${Parser.ABIL_ABVS.some(ab => obj[ab] != null) ? `**Ability Scores:** ${Parser.ABIL_ABVS.filter(ab => obj[ab] != null).map(ab => `${ab.toUpperCase()} ${obj[ab]} (${Parser.getAbilityModifier(obj[ab])})`).join(", ")}\n\n` : ""}
-${obj.resist ? `**Damage Resistances:** ${Parser.getFullImmRes(obj.resist)}\n\n` : ""}
-${obj.vulnerable ? `**Damage Vulnerabilities:** ${Parser.getFullImmRes(obj.vulnerable)}\n\n` : ""}
-${obj.conditionImmune ? `**Condition Immunities:** ${Parser.getFullCondImm(obj.conditionImmune)}\n\n` : ""}	`
-	}
-
 	static getObjectActions(obj) {
-		return obj.actionEntries.map(ae => RendererMarkdown.get().render(ae, 2)).join("\n\n");
+		return obj.actionEntries ? obj.actionEntries.map(ae => RendererMarkdown.get().render(ae, 2)).join("\n\n") : "";
 	}
 };
 
@@ -1300,6 +1272,55 @@ RendererMarkdown.hazard = class {
 		opts.depth = 1;
 		
 		return MarkdownConverter._getCompactRenderedStringGeneric(hazard, opts);
+	}
+};
+
+RendererMarkdown.action = class {
+	static getCompactRenderedString (action, opts = {}) {
+		return MarkdownConverter._getCompactRenderedStringGeneric(action, opts);
+	}
+};
+
+// Note: Does not include reprints or images
+RendererMarkdown.deity = class {
+	static getCompactRenderedString (deity, opts = {}) {
+		opts.prefix = MarkdownConverter.getGenericDetails(deity);
+		opts.noDivider = true;
+		// TODO: Maybe deal with image size
+		// TODO: image url may not actually work in practice
+		if (deity.symbolImg) opts.img = `![${deity.symbol || `Symbol of ${deity.name}`}](${Renderer.utils.getMediaUrl(deity.symbolImg, "href", "img")})`;
+		if (deity.previousVersions) opts.postfix = RendererMarkdown.deity.getPreviousVersions(deity.previousVersions);
+		if (deity.reprinted) opts.postfix = "*Note: this deity has been reprinted in a newer publication.*"
+
+		return MarkdownConverter._getCompactRenderedStringGeneric(deity, opts);
+	}
+
+	static getPreviousVersions(previousVersions) {
+		let ret = "";
+		let reprintIndex = 1;
+		previousVersions.forEach(prev => {
+			ret += "\n\n----------\n\n"
+			ret += `${reprintIndex === 1 ? `*This deity is a reprint. ` : "*"}The version below was printed in an older publication (${Parser.sourceJsonToFull(prev.source)}${Renderer.utils.isDisplayPage(prev.page) ? `, page ${prev.page}` : ""}).*\n\n`;
+			ret += MarkdownConverter.getGenericDetails(prev);
+			reprintIndex++;
+		});
+		return ret;
+	}
+};
+
+// Note: unfinished
+RendererMarkdown.language = class {
+	static getCompactRenderedString (language, opts = {}) {
+		opts.subtitle = language.type ? `${language.type.toTitleCase()} language` : "";
+		opts.prefix = RendererMarkdown.language.getLanguageDetails(language);
+		opts.noDivider = true;
+
+		return MarkdownConverter._getCompactRenderedStringGeneric(language, opts);
+	}
+
+	static getLanguageDetails(language) {
+		return `${language.typicalSpeakers ? `**Typical Speakers:** ${language.typicalSpeakers.join(", ")}` : ""}
+${language.script ? `**Script:** ${language.script}` : ""}`
 	}
 };
 
@@ -2126,6 +2147,118 @@ class MarkdownConverter {
 		if (tbl.colStyles && !tbl.colStyles.some(Boolean)) delete tbl.colStyles;
 	}
 
+	// Slightly modifies version of how getting the details for deities works
+	static getGenericDetails(it, excludeSize = false, orderOverride = null) {
+		const _basePartTranslators = {
+			// Race elements
+			"Ability Scores": {
+				prop: "ability",
+				displayFn: (it) => Renderer.getAbilityData(it).asText,
+			},
+			"Creature Type": {
+				prop: "creatureTypes",
+				displayFn: (it) => Parser.raceCreatureTypesToFull(it),
+			},
+			"Size": {
+				prop: "size",
+				displayFn: (it) => (it || [Parser.SZ_VARIES]).map(sz => Parser.sizeAbvToFull(sz)).join("/"),
+			},
+			// Cult elements
+			"Goals": {
+				prop: "goal",
+				displayFn: (it) => it.entry,
+			},
+			"Typical Cultists": {
+				prop: "cultists",
+				displayFn: (it) => Renderer.stripTags(it.entry),
+			},
+			"Signature Spells": {
+				prop: "signaturespells",
+				displayFn: (it) => Renderer.stripTags(it.entry),
+			},
+			// Object/Vehicle elements
+			"Creature Capacity": {
+				prop: "capCrew",
+				displayFn: (_, it) => Renderer.vehicle.getShipCreatureCapacity(it),
+			},
+			"Cargo Capacity": {
+				prop: "capCargo",
+				displayFn: (_, it) => Renderer.vehicle.getShipCargoCapacity(it),
+			},
+			"Armor Class": {
+				prop: "ac",
+				displayFn: (it) => it.special ?? it,
+			},
+			"Hit Points": {
+				prop: "hp",
+				displayFn: (it) => it.special ?? it,
+			},
+			"Speed": {
+				prop: "speed",
+				displayFn: (_, it) => Parser.getSpeedString(it),
+			},
+			"Damage Immunities": {
+				prop: "immune",
+				displayFn: (it) => Parser.getFullImmRes(it),
+			},
+			"Damage Resistances": {
+				prop: "resist",
+				displayFn: (it) => Parser.getFullImmRes(it),
+			},
+			"Damage Vulnerabilities": {
+				prop: "vulnerable",
+				displayFn: (it) => Parser.getFullImmRes(it),
+			},
+			"Condition Immunities": {
+				prop: "conditionImmune",
+				displayFn: (it) => Parser.getFullCondImm(it),
+			},
+			// Deity elements
+			"Alignment": {
+				prop: "alignment",
+				displayFn: (it) => it.map(a => Parser.alignmentAbvToFull(a)).join(" ").toTitleCase(),
+			},
+			"Pantheon": {
+				prop: "pantheon",
+			},
+			"Category": {
+				prop: "category",
+				displayFn: it => typeof it === "string" ? it : it.join(", "),
+			},
+			"Domains": {
+				prop: "domains",
+				displayFn: (it) => it.join(", "),
+			},
+			"Province": {
+				prop: "province",
+			},
+			"Alternate Names": {
+				prop: "altNames",
+				displayFn: (it) => it.join(", "),
+			},
+			"Symbol": {
+				prop: "symbol",
+			},
+		}
+
+		const parts = {};
+		Object.entries(_basePartTranslators).forEach(([k, v]) => {
+			const val = it[v.prop];
+			if (val != null && !(excludeSize && k == "Size")) {
+				const outVal = v.displayFn ? v.displayFn(val, it) : val;
+				parts[k] = outVal;
+			}
+			// To deal with object ability scores
+			if (k == "Ability Scores" && val == null && Parser.ABIL_ABVS.some(ab => it[ab] != null)) {
+				parts[k] = Parser.ABIL_ABVS.filter(ab => it[ab] != null).map(ab => `${ab.toUpperCase()} ${it[ab]} (${Parser.getAbilityModifier(it[ab])})`).join(", ")
+			}
+		});
+		if (it.customProperties) Object.entries(it.customProperties).forEach(([k, v]) => parts[k] = v);
+		const allKeys = Object.keys(parts).sort(SortUtil.ascSortLower);
+		const orderedKeys = orderOverride ? orderOverride.filter(k => allKeys.includes(k)) : allKeys;
+		return orderedKeys.map(k => `**${k}:** ${Renderer.get().render(parts[k])}`).join("\n\n");
+	}
+
 	static _getCompactRenderedStringGeneric (it, opts = {}) {
 		const title = it._displayName || it.name;
 		const prerequisite = Renderer.utils.prerequisite.getHtml(it.prerequisite, {isTextOnly: true, isSkipPrefix: true});
@@ -2145,12 +2278,13 @@ class MarkdownConverter {
 		subStack[0] +=`${opts.prerequisite ? `\n\n${opts.prerequisite}` : ""}\n\n`		
 		subStack[0] +=`${opts.noDivider ? "" : "----"}\n\n`;
 		subStack[0] += opts.prefix ? `${opts.prefix}\n\n` : "";
+		subStack[0] += opts.img ? `${opts.img}\n\n` : "";
 
 		meta.depth = opts.depth || 0;
 
 		RendererMarkdown.get().recursiveRender(entry, subStack, meta, {suffix: "\n"});
 
-		if (opts.postfix) subStack[0] += `\n\n----\n\n${opts.postfix}`;
+		if (opts.postfix) subStack[0] += `\n\n${opts.postfix}`;
 
 		const itemRender = subStack.join("").trim();
 		return `\n${itemRender}\n\n`;

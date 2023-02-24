@@ -8225,8 +8225,8 @@ Renderer.language = {
 		${isSkipNameRow ? "" : Renderer.utils.getNameTr(it, {page: UrlUtil.PG_LANGUAGES})}
 		${it.type ? `<tr class="text"><td colspan="6" class="pt-0"><i>${it.type.toTitleCase()} language</i></td></tr>` : ""}
 		${hasMeta ? `<tr class="text"><td colspan="6">
-		${it.typicalSpeakers ? `<div><b>Typical Speakers</b> ${Renderer.get().render(it.typicalSpeakers.join(", "))}</b>` : ""}
-		${it.script ? `<div><b>Script</b> ${Renderer.get().render(it.script)}</div>` : ""}
+		${it.typicalSpeakers ? `<div><b>Typical Speakers:</b> ${Renderer.get().render(it.typicalSpeakers.join(", "))}</b>` : ""}
+		${it.script ? `<div><b>Script:</b> ${Renderer.get().render(it.script)}</div>` : ""}
 		<div></div>
 		</td></tr>` : ""}
 		${allEntries.length ? `<tr class="text"><td colspan="6">

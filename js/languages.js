@@ -48,6 +48,8 @@ class LanguagesPage extends ListPage {
 			listClass: "languages",
 
 			dataProps: ["language"],
+
+			isMarkdownPopout: true,
 		});
 	}
 
