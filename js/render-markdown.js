@@ -1353,8 +1353,8 @@ RendererMarkdown.psionic = class {
 
 // TODO: This dumpster fire
 RendererMarkdown.vehicle = class {
-	static getCompactRenderedString (disease, opts = {}) {
-		return MarkdownConverter._getCompactRenderedStringGeneric(disease, opts);
+	static getCompactRenderedString (vehicle, opts = {}) {
+		return MarkdownConverter._getCompactRenderedStringGeneric(vehicle, opts);
 	}
 };
 
@@ -1363,6 +1363,54 @@ RendererMarkdown.vehicleUpgrade = class {
 		opts.subtitle = Renderer.vehicle.getUpgradeSummary(vehicleUpgrade);
 		opts.depth = 1;
 		return MarkdownConverter._getCompactRenderedStringGeneric(vehicleUpgrade, opts);
+	}
+};
+
+RendererMarkdown.recipe = class {
+	static getCompactRenderedString (recipe, opts = {}) {
+		opts.postfix = RendererMarkdown.recipe.getBodyHtml(recipe);
+		if (recipe.fluff?.images) opts.img = `![${recipe.name}](${Renderer.utils.getMediaUrl(recipe.fluff.images[0], "href", "img")})`;
+		console.log(RendererMarkdown.recipe.getBodyHtml(recipe))
+		return MarkdownConverter._getCompactRenderedStringGeneric(recipe, opts);
+	}
+
+	static getBodyHtml (it) {
+		const {ptMakes, ptServes} = RendererMarkdown.recipe._getMakesServesHtml(it);
+
+		return `
+${ptMakes || ""}
+${ptServes || ""}
+
+${RendererMarkdown.get().render({entries: it._fullIngredients}, 0)}
+${it._fullEquipment?.length ? `${RendererMarkdown.get().render({entries: it._fullEquipment})}` : ""}
+${it.noteCook ? `#### Cook's Notes\n\n${RendererMarkdown.get().render({entries: it.noteCook})}\n` : ""}
+#### Recipe
+
+${RendererMarkdown.get().setFirstSection(true).render({entries: it.instructions}, 2)}`;
+	}
+
+	static _getMakesServesHtml (it) {
+		const ptMakes = it.makes ? `#### ${it._scaleFactor ? `${it._scaleFactor}× ` : ""}${Renderer.get().render(it.makes || it.serves)}` : null;
+
+		const ptServes = it.serves ? `#### Serves ${it.serves.min ?? it.serves.exact}${it.serves.min != null ? " to " : ""}${it.serves.max ?? ""}` : null;
+
+		return {ptMakes, ptServes};
+	}
+};
+
+
+RendererMarkdown.variantrule = class {
+	static getCompactRenderedString (variantrule, opts = {}) {
+		opts.noDivider = true;
+
+		return MarkdownConverter._getCompactRenderedStringGeneric(variantrule, opts);
+	}
+};
+
+RendererMarkdown.table = class {
+	static getCompactRenderedString (table, opts = {}) {
+		opts.prefix = RendererMarkdown.get().render(table);
+		return MarkdownConverter._getCompactRenderedStringGeneric(table, opts);
 	}
 };
 

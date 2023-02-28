@@ -46,6 +46,8 @@ class TablesPage extends ListPage {
 			dataProps: ["table", "tableGroup"],
 
 			listSyntax: new ListSyntaxTables({fnGetDataList: () => this._dataList}),
+
+			isMarkdownPopout: true,
 		});
 	}
 

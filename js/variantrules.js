@@ -42,6 +42,8 @@ class VariantRulesPage extends ListPage {
 			listClass: "variantrules",
 
 			dataProps: ["variantrule"],
+
+			isMarkdownPopout: true,
 		});
 	}
 
