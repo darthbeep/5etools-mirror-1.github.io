@@ -1308,19 +1308,61 @@ RendererMarkdown.deity = class {
 	}
 };
 
-// Note: unfinished
 RendererMarkdown.language = class {
 	static getCompactRenderedString (language, opts = {}) {
 		opts.subtitle = language.type ? `${language.type.toTitleCase()} language` : "";
-		opts.prefix = RendererMarkdown.language.getLanguageDetails(language);
+		opts.prefix = MarkdownConverter.getGenericDetails(language);
 		opts.noDivider = true;
 
 		return MarkdownConverter._getCompactRenderedStringGeneric(language, opts);
 	}
+};
 
-	static getLanguageDetails(language) {
-		return `${language.typicalSpeakers ? `**Typical Speakers:** ${language.typicalSpeakers.join(", ")}` : ""}
-${language.script ? `**Script:** ${language.script}` : ""}`
+RendererMarkdown.reward = class {
+	static getCompactRenderedString (reward, opts = {}) {
+		opts.subtitle = reward.type;
+		opts.noDivider = true;
+
+		return MarkdownConverter._getCompactRenderedStringGeneric(reward, opts);
+	}
+};
+
+RendererMarkdown.psionic = class {
+	static getCompactRenderedString (psionic, opts = {}) {
+		opts.subtitle = Renderer.psionic.getTypeOrderString(psionic);
+		opts.postfix = RendererMarkdown.psionic.getBodyText(psionic, RendererMarkdown.get().setFirstSection(true));
+
+		return MarkdownConverter._getCompactRenderedStringGeneric(psionic, opts);
+	}
+
+	static getBodyText (psi, renderer) {
+		const renderStack = [];
+		if (psi.focus) renderStack.push(RendererMarkdown.psionic.getFocusString(psi, renderer));
+		if (psi.modes) renderStack.push(...psi.modes.map(mode => `${Renderer.psionic.getModeString(mode, renderer)}\n\n`));
+		return renderStack.join("");
+	}
+
+	static getDescriptionString (psionic, renderer) {
+		return `${renderer.render({type: "inline", entries: [psionic.description]})}\n\n`;
+	}
+
+	static getFocusString (psionic, renderer) {
+		return `*Psychic Focus.* ${renderer.render({type: "inline", entries: [psionic.focus]})}\n\n`;
+	}
+};
+
+// TODO: This dumpster fire
+RendererMarkdown.vehicle = class {
+	static getCompactRenderedString (disease, opts = {}) {
+		return MarkdownConverter._getCompactRenderedStringGeneric(disease, opts);
+	}
+};
+
+RendererMarkdown.vehicleUpgrade = class {
+	static getCompactRenderedString (vehicleUpgrade, opts = {}) {
+		opts.subtitle = Renderer.vehicle.getUpgradeSummary(vehicleUpgrade);
+		opts.depth = 1;
+		return MarkdownConverter._getCompactRenderedStringGeneric(vehicleUpgrade, opts);
 	}
 };
 
@@ -2239,6 +2281,14 @@ class MarkdownConverter {
 			"Symbol": {
 				prop: "symbol",
 			},
+			// Language elements
+			"Typical Speakers": {
+				prop: "typicalSpeakers",
+				displayFn: (it) => Renderer.stripTags(it.join(", "))
+			},
+			"Script": {
+				prop: "script",
+			}
 		}
 
 		const parts = {};

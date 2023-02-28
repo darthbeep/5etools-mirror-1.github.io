@@ -53,6 +53,8 @@ class VehiclesPage extends ListPage {
 			dataProps: ["vehicle", "vehicleUpgrade"],
 
 			listSyntax: new ListSyntaxVehicles({fnGetDataList: () => this._dataList, pFnGetFluff}),
+
+			isMarkdownPopout: true,
 		});
 	}
 

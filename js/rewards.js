@@ -44,6 +44,8 @@ class RewardsPage extends ListPage {
 			listClass: "rewards",
 
 			dataProps: ["reward"],
+
+			isMarkdownPopout: true,
 		});
 	}
 

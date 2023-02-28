@@ -68,6 +68,8 @@ class PsionicsPage extends ListPage {
 			},
 
 			listSyntax: new ListSyntaxPsionics({fnGetDataList: () => this._dataList}),
+
+			isMarkdownPopout: true,
 		});
 	}
 
