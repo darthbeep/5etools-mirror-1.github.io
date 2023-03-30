@@ -1118,10 +1118,9 @@ RendererMarkdown.legendaryGroup = class {
 
 RendererMarkdown.race = class {
 	static getCompactRenderedString (race, opts = {}) {
-		const postfix = RendererMarkdown.race.getHeightAndWeightPart(race);
 		opts.subtitle = MarkdownConverter.getGenericDetails(race);
 		opts.subtitleNoStar = true;
-		opts.postfix = `----\n\n${postfix}`;
+		opts.postfix = RendererMarkdown.race.getHeightAndWeightPart(race);
 		opts.depth = 1;
 
 		return MarkdownConverter._getCompactRenderedStringGeneric(race, opts);
@@ -1152,7 +1151,7 @@ RendererMarkdown.race = class {
 			},
 		];
 
-		return RendererMarkdown.get().render({entries});
+		return `---\n\n${RendererMarkdown.get().render({entries})}`;
 	}
 };
 
@@ -1354,7 +1353,59 @@ RendererMarkdown.psionic = class {
 // TODO: This dumpster fire
 RendererMarkdown.vehicle = class {
 	static getCompactRenderedString (vehicle, opts = {}) {
-		return MarkdownConverter._getCompactRenderedStringGeneric(vehicle, opts);
+		return RendererMarkdown.vehicle.getRenderedString(vehicle, opts);
+	}
+
+	static getRenderedString (veh, opts) {
+		opts = opts || {};
+
+		if (veh.upgradeType) return Renderer.vehicle._getRenderedString_upgrade(veh, opts);
+
+		opts.noDivider = true;
+
+		veh.vehicleType = veh.vehicleType || "SHIP";
+		switch (veh.vehicleType) {
+			case "SHIP": return RendererMarkdown.vehicle._getRenderedString_ship(veh, opts);
+			case "SPELLJAMMER": return Renderer.vehicle._getRenderedString_spelljammer(veh, opts);
+			case "INFWAR": return Renderer.vehicle._getRenderedString_infwar(veh, opts);
+			case "CREATURE": return Renderer.monster.getCompactRenderedString(veh, {...opts, isHideLanguages: true, isHideSenses: true, isCompact: false, page: UrlUtil.PG_VEHICLES});
+			case "OBJECT": return Renderer.object.getCompactRenderedString(veh, {...opts, isCompact: false, page: UrlUtil.PG_VEHICLES});
+			default: throw new Error(`Unhandled vehicle type "${veh.vehicleType}"`);
+		}
+	}
+
+	static _getRenderedString_ship (veh, opts) {
+		const renderer = RendererMarkdown.get();
+
+		opts.subtitle = `${Parser.sizeAbvToFull(veh.size)} vehicle${veh.dimensions ? ` (${veh.dimensions.join(" by ")})` : ""}`;
+		const detailOrder = ["Creature Capacity", "Cargo Capacity", "Travel Pace", "Ability Scores", "Damage Immunities", "Condition Immunities"]
+		opts.prefix = MarkdownConverter.getGenericDetails(veh, true, detailOrder, true);
+
+		opts.postfix = `
+${veh.action ? "### Actions" : ""}
+${veh.action ? `${Renderer.vehicle.ship.getActionPart_(renderer, veh)}\n` : ""}
+${veh.other ? `${renderer.render(veh.other[0])}\n`: ""}
+${veh.hull ? `### Hull\n` : ""}
+${veh.hull ? MarkdownConverter.getGenericDetails(veh.hull) : ""}
+${Renderer.vehicle._getTraitSection(renderer, veh)}
+${veh.control ? RendererMarkdown.vehicle.getMultipleGenericDetails("Control", veh.control) : ""}
+${veh.movement ? RendererMarkdown.vehicle.getMultipleGenericDetails("Movement", veh.movement) : ""}
+${veh.weapon ? RendererMarkdown.vehicle.getMultipleGenericDetails("Weapon", veh.weapon) : ""}
+		`;
+
+		return MarkdownConverter._getCompactRenderedStringGeneric(veh, opts);
+	}
+
+	static getMultipleGenericDetails(name, section) {
+		let ret = "";
+		section.forEach(s => {
+			ret += `### ${name}: ${s.name}${s.count ? ` (${s.count})` : ""}\n\n`;
+			ret += `${MarkdownConverter.getGenericDetails(s)}\n\n`;
+			if (s.entries) s.entries.forEach(e => {
+				ret +=  `${RendererMarkdown.get().render(e)}\n\n`
+			});
+		});
+		return ret;
 	}
 };
 
@@ -2238,7 +2289,7 @@ class MarkdownConverter {
 	}
 
 	// Slightly modifies version of how getting the details for deities works
-	static getGenericDetails(it, excludeSize = false, orderOverride = null) {
+	static getGenericDetails(it, excludeSize = false, orderOverride = null, noColon = false) {
 		const _basePartTranslators = {
 			// Race elements
 			"Ability Scores": {
@@ -2281,7 +2332,8 @@ class MarkdownConverter {
 			},
 			"Hit Points": {
 				prop: "hp",
-				displayFn: (it) => it.special ?? it,
+				displayFn: (_, it) => `${it.hp?.special ?? it.hp}${it.dt ? ` (damage threshold ${it.dt})` : ""}\
+${it.hpNote ? `; ${it.hpNote}` : ""}`,
 			},
 			"Speed": {
 				prop: "speed",
@@ -2301,7 +2353,14 @@ class MarkdownConverter {
 			},
 			"Condition Immunities": {
 				prop: "conditionImmune",
-				displayFn: (it) => Parser.getFullCondImm(it),
+				displayFn: (it) => Parser.getFullCondImm(it, true),
+			},
+			"Travel Pace": {
+				prop: "pace",
+				displayFn: (it) => `${it} miles per hour (${it * 24} miles per day}`,
+			},
+			"Locomotion": {
+				prop: "locomotion"
 			},
 			// Deity elements
 			"Alignment": {
@@ -2342,19 +2401,26 @@ class MarkdownConverter {
 		const parts = {};
 		Object.entries(_basePartTranslators).forEach(([k, v]) => {
 			const val = it[v.prop];
-			if (val != null && !(excludeSize && k == "Size")) {
-				const outVal = v.displayFn ? v.displayFn(val, it) : val;
-				parts[k] = outVal;
+			// To deal with vehicle speeds
+			if ((k == "Speed" || k == "Locomotion") && Array.isArray(val)) {
+				val.forEach(v => {
+					parts[`${k} (${v.mode})`] = v.entries.join();
+				});
 			}
 			// To deal with object ability scores
-			if (k == "Ability Scores" && val == null && Parser.ABIL_ABVS.some(ab => it[ab] != null)) {
+			else if (k == "Ability Scores" && val == null && Parser.ABIL_ABVS.some(ab => it[ab] != null)) {
 				parts[k] = Parser.ABIL_ABVS.filter(ab => it[ab] != null).map(ab => `${ab.toUpperCase()} ${it[ab]} (${Parser.getAbilityModifier(it[ab])})`).join(", ")
+			}
+			// Default Case
+			else if (val != null && !(excludeSize && k == "Size")) {
+				const outVal = v.displayFn ? v.displayFn(val, it) : val;
+				parts[k] = outVal;
 			}
 		});
 		if (it.customProperties) Object.entries(it.customProperties).forEach(([k, v]) => parts[k] = v);
 		const allKeys = Object.keys(parts).sort(SortUtil.ascSortLower);
 		const orderedKeys = orderOverride ? orderOverride.filter(k => allKeys.includes(k)) : allKeys;
-		return orderedKeys.map(k => `**${k}:** ${Renderer.get().render(parts[k])}`).join("\n\n");
+		return orderedKeys.map(k => `**${k}${noColon ? "" : ":"}** ${Renderer.get().render(parts[k])}`).join("\n\n");
 	}
 
 	static _getCompactRenderedStringGeneric (it, opts = {}) {
